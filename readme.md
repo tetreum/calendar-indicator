@@ -12,6 +12,7 @@ This indicator shows the most immediate event of your Google Calendar in your Ub
 4. Get your Google Calendar Secret Address (info: https://support.google.com/calendar/answer/37648?hl=en)
 5. Edit `config.json` file with your calendar.
 6. Run `./start.sh` and it will work until you restart/shutdown your computer.
+7. (Optional) If you like it and want it to start on reboot, run `./runOnBoot.sh`.
 
 ## Config file details
 
