@@ -19,6 +19,11 @@ from gi.repository import Notify as notify
 
 config = json.load(open('./config.json'))
 
+class CalendarEvent(object):
+    def __init__(self, date, component):
+        self.date = date
+        self.component = component
+
 class CalendarIndicator(object):
 
     def __init__(self):
@@ -37,9 +42,9 @@ class CalendarIndicator(object):
     def readEvents(self):
         data = urlopen(config["calendar"]).read().decode('utf-8')
 #        data = open("calendar.ics").read() # useful for debugging
-        local_tz = pytz.timezone(config["timezone"])
-        now = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(local_tz)
-        gotEvent = False
+        localTZ = pytz.timezone(config["timezone"])
+        now = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(localTZ)
+        nearestEvent = False
         meetsPattern = "(https://meet.google.com/[a-zA-Z0-9_-]+)"
 
         if (config["hourFormat"] == 24):
@@ -53,36 +58,55 @@ class CalendarIndicator(object):
                 if component.name != "VEVENT":
                     continue
 
-                eventDate = component.dtstart.valueRepr().replace(tzinfo=pytz.utc).astimezone(local_tz)
+                eventDate = component.dtstart.valueRepr().replace(tzinfo=pytz.utc).astimezone(localTZ)
 
-                if eventDate > now and eventDate.day == now.day:
-                    hasMeetUrl = re.search(meetsPattern, component.description.valueRepr())
+                # Repeating events are somehow special, they don't tell you if today meets the criteria, so you gotta adapt
+                # RRULE format: FREQ=WEEKLY;UNTIL=20200318T225959Z;BYDAY=FR,MO,TH,TU,WE
+                if  hasattr(component, 'rrule'):
+                    allEventDates = component.getrruleset(addRDate=True)
+                    expectedDate = allEventDates[0].replace(day=now.day, month=now.month, year=now.year); # ugly hack to keep proper event hour/minute while checking if happens today too
 
-                    if (hasMeetUrl):
-                        self.meetUrl = hasMeetUrl.group()
-                    else :
-                        self.meetUrl = False
+                    if expectedDate in allEventDates:
+                        eventDate = expectedDate
 
-                    self.indicator.set_label("Today at " + eventDate.strftime(hourFormat) + " -> " + component.summary.valueRepr(), "8.8")
-                    gotEvent = True
-                    break
+                if eventDate > now and eventDate.day == now.day and (nearestEvent == False or eventDate < nearestEvent.date):
+                    nearestEvent = CalendarEvent(eventDate, component)
 
-        if (gotEvent == False):
+
+        if (nearestEvent == False):
             self.indicator.set_label("No more events for today! :P", "8.8")
+        else:
+            hasMeetUrl = re.search(meetsPattern, nearestEvent.component.description.valueRepr())
+
+            if (hasMeetUrl):
+                self.meetUrl = hasMeetUrl.group()
+            else :
+                self.meetUrl = False
+
+            self.indicator.set_label("Today at " + nearestEvent.date.strftime(hourFormat) + " -> " + nearestEvent.component.summary.valueRepr(), "8.8")
+
 
         return True # required for timeout_add_seconds to work
 
     def build_menu(self):
         menu = gtk.Menu()
+
         item = gtk.MenuItem('Open Google Meet')
         item.connect('activate', self.openMeet)
         menu.append(item)
+
         item = gtk.MenuItem('Open Google Calendar')
         item.connect('activate', self.openCalendar)
         menu.append(item)
-        item_quit = gtk.MenuItem('Quit')
-        item_quit.connect('activate', self.quit)
-        menu.append(item_quit)
+
+        item = gtk.MenuItem('Refresh')
+        item.connect('activate', self.refresh)
+        menu.append(item)
+
+        item = gtk.MenuItem('Quit')
+        item.connect('activate', self.quit)
+        menu.append(item)
+
         menu.show_all()
         return menu
 
@@ -94,6 +118,10 @@ class CalendarIndicator(object):
 
     def openCalendar(self, _):
         webbrowser.open('https://calendar.google.com', new=2)
+
+    def refresh(self, _):
+        self.indicator.set_label("Reading calendar...", "8.8")
+        self.readEvents()
 
     def quit(self, _):
         notify.uninit()
