@@ -2,7 +2,7 @@
 
 # Calendar Indicator
 
-This indicator shows the most immediate event of your Google Calendar in your Ubuntu top bar.
+This indicator shows the most immediate event of your Google Calendar in your Ubuntu top bar, and includes a link to event's google meet (if detected).
 
 *Warning*: I hardly code in Python, so refactors are welcome.
 
