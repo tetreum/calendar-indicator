@@ -4,6 +4,8 @@
 
 This indicator shows the most immediate event of your Google Calendar in your Ubuntu top bar.
 
+*Warning*: I hardly code in Python, so refactors are welcome.
+
 ## Setup
 
 1. Download this repository [clicking here](https://github.com/tetreum/calendar-indicator/archive/master.zip).
