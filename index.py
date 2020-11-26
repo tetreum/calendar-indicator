@@ -58,7 +58,11 @@ class CalendarIndicator(object):
                 if component.name != "VEVENT":
                     continue
 
-                eventDate = component.dtstart.valueRepr().replace(tzinfo=pytz.utc).astimezone(localTZ)
+                try:
+                    eventDate = component.dtstart.valueRepr().replace(tzinfo=pytz.utc).astimezone(localTZ)
+                except:
+                    print("Invalid date, skipping event " + component.summary.valueRepr())
+                    continue
 
                 # Repeating events are somehow special, they don't tell you if today meets the criteria, so you gotta adapt
                 # RRULE format: FREQ=WEEKLY;UNTIL=20200318T225959Z;BYDAY=FR,MO,TH,TU,WE
